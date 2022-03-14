@@ -17,29 +17,29 @@ public class Piece extends StackPane {
     public Piece(PieceType pieceType, int x, int y) {
         this.pieceType = pieceType;
 
-        oldX = x * Chessboard.TILE_SIZE;
-        oldY = y * Chessboard.TILE_SIZE;
+        oldX = x * ChessboardClient.TILE_SIZE;
+        oldY = y * ChessboardClient.TILE_SIZE;
         relocate(oldX, oldY);
 
-        Ellipse ellipseBackground = new Ellipse(Chessboard.TILE_SIZE * 0.3125, Chessboard.TILE_SIZE * 0.26);
+        Ellipse ellipseBackground = new Ellipse(ChessboardClient.TILE_SIZE * 0.3125, ChessboardClient.TILE_SIZE * 0.26);
 
         ellipseBackground.setFill(Color.BLACK);
 
         ellipseBackground.setStroke(Color.BLACK);
-        ellipseBackground.setStrokeWidth(Chessboard.TILE_SIZE * 0.03);
+        ellipseBackground.setStrokeWidth(ChessboardClient.TILE_SIZE * 0.03);
 
-        ellipseBackground.setTranslateX((Chessboard.TILE_SIZE - Chessboard.TILE_SIZE * 0.3125 * 2) / 2);
-        ellipseBackground.setTranslateY((Chessboard.TILE_SIZE - Chessboard.TILE_SIZE * 0.26 * 2) / 2 + Chessboard.TILE_SIZE * 0.07);
+        ellipseBackground.setTranslateX((ChessboardClient.TILE_SIZE - ChessboardClient.TILE_SIZE * 0.3125 * 2) / 2);
+        ellipseBackground.setTranslateY((ChessboardClient.TILE_SIZE - ChessboardClient.TILE_SIZE * 0.26 * 2) / 2 + ChessboardClient.TILE_SIZE * 0.07);
 
-        Ellipse ellipse = new Ellipse(Chessboard.TILE_SIZE * 0.3125, Chessboard.TILE_SIZE * 0.26);
+        Ellipse ellipse = new Ellipse(ChessboardClient.TILE_SIZE * 0.3125, ChessboardClient.TILE_SIZE * 0.26);
 
         ellipse.setFill(pieceType == PieceType.RED ? Color.valueOf("#c40003") : Color.valueOf("#fff9f4"));
 
         ellipse.setStroke(Color.BLACK);
-        ellipse.setStrokeWidth(Chessboard.TILE_SIZE * 0.03);
+        ellipse.setStrokeWidth(ChessboardClient.TILE_SIZE * 0.03);
 
-        ellipse.setTranslateX((Chessboard.TILE_SIZE - Chessboard.TILE_SIZE * 0.3125 * 2) / 2);
-        ellipse.setTranslateY((Chessboard.TILE_SIZE - Chessboard.TILE_SIZE * 0.26 * 2) / 2);
+        ellipse.setTranslateX((ChessboardClient.TILE_SIZE - ChessboardClient.TILE_SIZE * 0.3125 * 2) / 2);
+        ellipse.setTranslateY((ChessboardClient.TILE_SIZE - ChessboardClient.TILE_SIZE * 0.26 * 2) / 2);
 
         getChildren().addAll(ellipseBackground, ellipse);
 
@@ -63,8 +63,8 @@ public class Piece extends StackPane {
     }
 
     public void move(int x, int y) {
-        oldX = x * Chessboard.TILE_SIZE;
-        oldY = y * Chessboard.TILE_SIZE;
+        oldX = x * ChessboardClient.TILE_SIZE;
+        oldY = y * ChessboardClient.TILE_SIZE;
 
         relocate(oldX, oldY);
     }
@@ -79,15 +79,15 @@ public class Piece extends StackPane {
     }
 
     public void promoteImage() {
-        Ellipse doubleEllipse = new Ellipse(Chessboard.TILE_SIZE * 0.3125 * 0.5, Chessboard.TILE_SIZE * 0.26 * 0.5);
+        Ellipse doubleEllipse = new Ellipse(ChessboardClient.TILE_SIZE * 0.3125 * 0.5, ChessboardClient.TILE_SIZE * 0.26 * 0.5);
 
         doubleEllipse.setFill(pieceType == PieceType.RED ? Color.valueOf("#c40003") : Color.valueOf("#fff9f4"));
 
         doubleEllipse.setStroke(Color.BLACK);
-        doubleEllipse.setStrokeWidth(Chessboard.TILE_SIZE * 0.03);
+        doubleEllipse.setStrokeWidth(ChessboardClient.TILE_SIZE * 0.03);
 
-        doubleEllipse.setTranslateX((Chessboard.TILE_SIZE - Chessboard.TILE_SIZE * 0.3125 * 2) / 2);
-        doubleEllipse.setTranslateY((Chessboard.TILE_SIZE - Chessboard.TILE_SIZE * 0.26 * 2) / 2);
+        doubleEllipse.setTranslateX((ChessboardClient.TILE_SIZE - ChessboardClient.TILE_SIZE * 0.3125 * 2) / 2);
+        doubleEllipse.setTranslateY((ChessboardClient.TILE_SIZE - ChessboardClient.TILE_SIZE * 0.26 * 2) / 2);
 
         getChildren().addAll(doubleEllipse);
     }

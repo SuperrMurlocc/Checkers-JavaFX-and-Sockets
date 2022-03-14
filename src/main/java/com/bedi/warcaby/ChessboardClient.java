@@ -7,7 +7,11 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
-public class Chessboard extends Application {
+import java.io.*;
+import java.net.Socket;
+import java.util.Objects;
+
+public class ChessboardClient extends Application {
     public static final int TILE_SIZE = 100;
     public static final int WIDTH = 8;
     public static final int HEIGHT = 8;
@@ -17,7 +21,19 @@ public class Chessboard extends Application {
     private final Group tileGroup = new Group();
     private final Group pieceGroup = new Group();
 
-    private Parent createContent() {
+    private BufferedWriter bufferedWriter;
+    private BufferedReader bufferedReader;
+
+    private Parent createContent() throws IOException {
+        Socket socket = new Socket("localhost", 1234);
+
+        try {
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        } catch (IOException e) {
+            closeEverything(socket, bufferedReader, bufferedWriter);
+        }
+
         Pane root = new Pane();
         root.setPrefSize(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE);
         root.getChildren().addAll(tileGroup, pieceGroup);
@@ -48,31 +64,7 @@ public class Chessboard extends Application {
     }
 
     private int pixelToBoard(double pixel) {
-        return (int)(pixel + Chessboard.TILE_SIZE / 2) / TILE_SIZE;
-    }
-
-    private MoveResult tryMove(Piece piece, int newX, int newY) {
-        if (board[newX][newY].hasPiece() || (newX + newY) % 2 == 0) {
-            return new MoveResult(MoveType.NONE);
-        }
-
-        int oldX = pixelToBoard(piece.getOldX());
-        int oldY = pixelToBoard(piece.getOldY());
-
-        if (Math.abs(newX - oldX) == 1 && newY - oldY == piece.getPieceType().moveDir ) {
-            return new MoveResult(MoveType.NORMAL);
-        } else if (Math.abs(newX - oldX) == 2 && Math.abs(newY - oldY) == 2) {
-            int middleX = oldX + (newX - oldX) / 2;
-            int middleY = oldY + (newY - oldY) / 2;
-
-            if (board[middleX][middleY].hasPiece() && board[middleX][middleY].getPiece().getPieceType() != piece.getPieceType()) {
-                return new MoveResult(MoveType.KILL, board[middleX][middleY].getPiece());
-            }
-        } else if (piece.getPieceType().moveDir == 0 && Math.abs(newX - oldX) == 1 && Math.abs(newY - oldY) == 1) {
-            return new MoveResult(MoveType.NORMAL);
-        }
-
-        return new MoveResult(MoveType.NONE);
+        return (int)(pixel + ChessboardClient.TILE_SIZE / 2) / TILE_SIZE;
     }
 
     private Piece makePiece(PieceType pieceType, int x, int y) {
@@ -114,15 +106,57 @@ public class Chessboard extends Application {
         return piece;
     }
 
+    public MoveResult tryMove(Piece piece, int newX, int newY) {
+        String string = null;
+
+        try {
+            bufferedWriter.write(pixelToBoard(piece.getOldX()) + " " + pixelToBoard(piece.getOldY()) + " " + newX + " " + newY);
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
+
+            string = bufferedReader.readLine();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        MoveResult moveResult;
+        switch (Objects.requireNonNull(string).substring(0, 4)) {
+            case "NORM" -> moveResult = new MoveResult(MoveType.NORMAL);
+            case "KILL" -> {
+                int killX = (int) Float.parseFloat(string.split(" ")[1]);
+                int killY = (int) Float.parseFloat(string.split(" ")[2]);
+                moveResult = new MoveResult(MoveType.KILL, board[killX][killY].getPiece());
+            }
+            default -> moveResult = new MoveResult(MoveType.NONE);
+        }
+        return moveResult;
+    }
+
     @Override
-    public void start(Stage stage) {
+    public void start(Stage stage) throws IOException {
         Scene scene = new Scene(createContent());
         stage.setTitle("Checkers");
         stage.setScene(scene);
         stage.show();
     }
 
-    public static void main(String[] args) {
-        launch(args);
+    public static void main(String[] args) throws IOException {
+        launch();
+    }
+
+    public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
+        try {
+            if (bufferedReader != null) {
+                bufferedReader.close();
+            }
+            if (bufferedWriter != null) {
+                bufferedWriter.close();
+            }
+            if (socket != null) {
+                socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
