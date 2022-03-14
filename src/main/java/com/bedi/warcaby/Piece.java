@@ -75,7 +75,7 @@ public class Piece extends StackPane {
 
     public void promote() {
         promoteImage();
-        pieceType.moveDir = 0;
+        pieceType.moveDir = (pieceType == PieceType.RED) ? PieceType.RED_SUP.moveDir : PieceType.WHITE_SUP.moveDir;
     }
 
     public void promoteImage() {
