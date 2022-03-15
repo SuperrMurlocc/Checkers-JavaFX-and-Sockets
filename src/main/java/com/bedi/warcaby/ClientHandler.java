@@ -165,7 +165,8 @@ public class ClientHandler implements Runnable {
     }
 
     public void makeMove(Piece piece, int newX, int newY, MoveResult moveResult) {
-        switch (moveResult.getMoveType()) {
+        MoveType moveType = moveResult.getMoveType();
+        switch (moveType) {
             case NONE -> piece.abortMove();
             case NORMAL -> {
                 board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
@@ -179,11 +180,13 @@ public class ClientHandler implements Runnable {
 
                 Piece otherPiece = moveResult.getPiece();
                 board[Coder.pixelToBoard(otherPiece.getOldX())][Coder.pixelToBoard(otherPiece.getOldY())].setPiece(null);
+                if (newY == 7 || newY == 0) {
+                    piece.promote();
+                }
             }
+
         }
-        if (newY == 7 || newY == 0) {
-            piece.promote();
-        }
+
     }
 
     private void closeEverything() {

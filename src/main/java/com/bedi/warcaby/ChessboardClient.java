@@ -134,13 +134,17 @@ public class ChessboardClient extends Application {
     }
 
     private void makeMove(Piece piece, int newX, int newY, MoveResult moveResult) {
-        switch (moveResult.getMoveType()) {
+        MoveType moveType = moveResult.getMoveType();
+        switch (moveType) {
             case NONE -> piece.abortMove();
             case NORMAL -> {
                 board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
                 piece.move(newX, newY);
                 board[newX][newY].setPiece(piece);
                 isItMyTurn = false;
+                if (newY == 7 || newY == 0) {
+                    Platform.runLater(piece::promote);
+                }
             }
             case KILL -> {
                 board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
@@ -151,13 +155,11 @@ public class ChessboardClient extends Application {
                 board[Coder.pixelToBoard(otherPiece.getOldX())][Coder.pixelToBoard(otherPiece.getOldY())].setPiece(null);
                 Platform.runLater(() -> pieceGroup.getChildren().remove(otherPiece));
                 isItMyTurn = false;
+                if (newY == 7 || newY == 0) {
+                    Platform.runLater(piece::promote);
+                }
             }
         }
-        if (newY == 7 || newY == 0) {
-            Platform.runLater(piece::promote);
-        }
-
-
     }
 
     public void countTime() {
