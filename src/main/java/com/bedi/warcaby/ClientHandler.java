@@ -1,8 +1,5 @@
 package com.bedi.warcaby;
 
-import javafx.application.Platform;
-import javafx.scene.Group;
-
 import java.io.*;
 import java.net.Socket;
 
@@ -66,7 +63,7 @@ public class ClientHandler implements Runnable {
 
                 Piece piece = null;
                 if (y <= 2 && (x + y) % 2 != 0) {
-                    piece = new Piece(PieceType.RED, x, y);
+                    piece = new Piece(PieceType.GRAY, x, y);
                 } else if (y >= 5 && (x + y) % 2 != 0) {
                     piece = new Piece(PieceType.WHITE, x, y);
                 }
@@ -184,9 +181,7 @@ public class ClientHandler implements Runnable {
                     piece.promote();
                 }
             }
-
         }
-
     }
 
     private void closeEverything() {

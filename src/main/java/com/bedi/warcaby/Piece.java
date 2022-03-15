@@ -33,7 +33,7 @@ public class Piece extends StackPane {
 
         Ellipse ellipse = new Ellipse(ChessboardClient.TILE_SIZE * 0.3125, ChessboardClient.TILE_SIZE * 0.26);
 
-        ellipse.setFill(pieceType == PieceType.RED ? Color.valueOf("#c40003") : Color.valueOf("#fff9f4"));
+        ellipse.setFill(pieceType == PieceType.GRAY ? Color.valueOf("#4F4F4F") : Color.valueOf("#CEB087"));
 
         ellipse.setStroke(Color.BLACK);
         ellipse.setStrokeWidth(ChessboardClient.TILE_SIZE * 0.03);
@@ -75,13 +75,13 @@ public class Piece extends StackPane {
 
     public void promote() {
         promoteImage();
-        pieceType.moveDir = (pieceType == PieceType.RED) ? PieceType.RED_SUP.moveDir : PieceType.WHITE_SUP.moveDir;
+        pieceType.moveDir = (pieceType == PieceType.GRAY) ? PieceType.GRAY_SUP.moveDir : PieceType.WHITE_SUP.moveDir;
     }
 
     public void promoteImage() {
         Ellipse doubleEllipse = new Ellipse(ChessboardClient.TILE_SIZE * 0.3125 * 0.5, ChessboardClient.TILE_SIZE * 0.26 * 0.5);
 
-        doubleEllipse.setFill(pieceType == PieceType.RED ? Color.valueOf("#c40003") : Color.valueOf("#fff9f4"));
+        doubleEllipse.setFill(pieceType == PieceType.GRAY ? Color.valueOf("#4F4F4F") : Color.valueOf("#CEB087"));
 
         doubleEllipse.setStroke(Color.BLACK);
         doubleEllipse.setStrokeWidth(ChessboardClient.TILE_SIZE * 0.03);

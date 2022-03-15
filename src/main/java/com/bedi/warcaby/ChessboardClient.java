@@ -9,6 +9,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import java.io.*;
@@ -35,8 +36,7 @@ public class ChessboardClient extends Application {
     private final Label colorLabel = new Label();
 
     private float time = 0;
-    private final Label timeLabel = new Label();
-    private final StringProperty timeString = new SimpleStringProperty("Timer: 0s.");
+    private final Timer timer = new Timer();
 
     private boolean isItMyTurn = false;
 
@@ -74,7 +74,7 @@ public class ChessboardClient extends Application {
     private Parent createContent() {
         Pane root = new Pane();
         root.setPrefSize(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE);
-        root.getChildren().addAll(tileGroup, pieceGroup, colorLabel, timeLabel);
+        root.getChildren().addAll(tileGroup, pieceGroup, colorLabel, timer);
 
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
@@ -85,7 +85,7 @@ public class ChessboardClient extends Application {
 
                 Piece piece = null;
                 if (y <= 2 && (x + y) % 2 != 0) {
-                    piece = makePiece(PieceType.RED, x, y);
+                    piece = makePiece(PieceType.GRAY, x, y);
                 } else if (y >= 5 && (x + y) % 2 != 0) {
                     piece = makePiece(PieceType.WHITE, x, y);
                 }
@@ -97,10 +97,8 @@ public class ChessboardClient extends Application {
             }
         }
 
-        timeLabel.relocate(0,30);
         colorLabel.relocate(0,0);
-        colorLabel.setText("You play" + ((player == 1) ? " RED" : " WHITE"));
-        timeLabel.textProperty().bind(timeString);
+        colorLabel.setText("You play" + ((player == 1) ? " GRAY" : " WHITE"));
 
         return root;
     }
@@ -167,7 +165,7 @@ public class ChessboardClient extends Application {
         executor.scheduleAtFixedRate(() -> {
             if (isItMyTurn) {
                 time += 0.1;
-                Platform.runLater(() -> timeString.set("Timer: " + (int)time + "s."));
+                Platform.runLater(() -> timer.set("Timer: " + (int)time + "s."));
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
     }
