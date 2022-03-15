@@ -5,7 +5,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Ellipse;
 
 public class Piece extends StackPane {
-    private PieceType pieceType;
+    private final PieceType pieceType;
 
     private double mouseX, mouseY;
     private double oldX, oldY;

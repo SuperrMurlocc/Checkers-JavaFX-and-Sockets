@@ -9,23 +9,18 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ChessboardClient extends Application {
     public static final int TILE_SIZE = 100;
     public static final int WIDTH = 8;
     public static final int HEIGHT = 8;
-
-    private int player;
-
-    private float time = 0;
-    private final Text colorText = new Text();
-    private final StringProperty timeString = new SimpleStringProperty();
-    private final Label timeText = new Label();
 
     private final Tile[][] board = new Tile[WIDTH][HEIGHT];
 
@@ -36,12 +31,50 @@ public class ChessboardClient extends Application {
     private BufferedWriter bufferedWriter;
     private BufferedReader bufferedReader;
 
+    private int player;
+    private final Label colorLabel = new Label();
+
+    private float time = 0;
+    private final Label timeLabel = new Label();
+    private final StringProperty timeString = new SimpleStringProperty("Timer: 0s.");
+
     private boolean isItMyTurn = false;
+
+    public static void main(String[] args) {
+        launch();
+    }
+
+    @Override
+    public void start(Stage stage) throws IOException {
+        socket = new Socket("localhost", 1234);
+
+        try {
+            bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            if (bufferedReader.readLine().equals("1")) {
+                player = 1;
+            } else {
+                player = 2;
+            }
+        } catch (IOException e) {
+            closeEverything();
+        }
+
+        countTime();
+        listenToServer();
+
+        Scene scene = new Scene(createContent());
+        stage.setTitle("Checkers");
+        stage.setScene(scene);
+        stage.show();
+
+    }
 
     private Parent createContent() {
         Pane root = new Pane();
         root.setPrefSize(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE);
-        root.getChildren().addAll(tileGroup, pieceGroup, colorText, timeText);
+        root.getChildren().addAll(tileGroup, pieceGroup, colorLabel, timeLabel);
 
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
@@ -64,62 +97,25 @@ public class ChessboardClient extends Application {
             }
         }
 
-        timeText.relocate(0,30);
-        colorText.relocate(0,0);
-        colorText.setText("You play" + ((player == 1) ? " RED" : " WHITE"));
-        timeText.textProperty().bind(timeString);
+        timeLabel.relocate(0,30);
+        colorLabel.relocate(0,0);
+        colorLabel.setText("You play" + ((player == 1) ? " RED" : " WHITE"));
+        timeLabel.textProperty().bind(timeString);
 
         return root;
-    }
-
-    private int pixelToBoard(double pixel) {
-        return (int)(pixel + ChessboardClient.TILE_SIZE / 2) / TILE_SIZE;
     }
 
     private Piece makePiece(PieceType pieceType, int x, int y) {
         Piece piece = new Piece(pieceType, x ,y);
 
         piece.setOnMouseReleased(e -> {
-            int newX = pixelToBoard(piece.getLayoutX());
-            int newY = pixelToBoard(piece.getLayoutY());
+            int newX = Coder.pixelToBoard(piece.getLayoutX());
+            int newY = Coder.pixelToBoard(piece.getLayoutY());
 
             requestMove(piece, newX, newY);
         });
 
         return piece;
-    }
-
-    private void makeMove(Piece piece, int newX, int newY, MoveResult moveResult) {
-        switch (moveResult.getMoveType()) {
-            case NONE -> piece.abortMove();
-            case NORMAL -> {
-                board[pixelToBoard(piece.getOldX())][pixelToBoard(piece.getOldY())].setPiece(null);
-                piece.move(newX, newY);
-                board[newX][newY].setPiece(piece);
-
-                if (newY == 7 || newY == 0) {
-                    Platform.runLater(piece::promote);
-                }
-
-                isItMyTurn = false;
-            }
-            case KILL -> {
-                board[pixelToBoard(piece.getOldX())][pixelToBoard(piece.getOldY())].setPiece(null);
-                piece.move(newX, newY);
-                board[newX][newY].setPiece(piece);
-
-                Piece otherPiece = moveResult.getPiece();
-                board[pixelToBoard(otherPiece.getOldX())][pixelToBoard(otherPiece.getOldY())].setPiece(null);
-                Platform.runLater(() -> pieceGroup.getChildren().remove(otherPiece));
-
-                if (newY == 7 || newY == 0) {
-                    Platform.runLater(piece::promote);
-                }
-
-                isItMyTurn = false;
-            }
-        }
-
     }
 
     public void requestMove(Piece piece, int newX, int newY) {
@@ -129,61 +125,50 @@ public class ChessboardClient extends Application {
         }
 
         try {
-            bufferedWriter.write(pixelToBoard(piece.getOldX()) + " " + pixelToBoard(piece.getOldY()) + " " + newX + " " + newY);
+            bufferedWriter.write(Coder.pixelToBoard(piece.getOldX()) + " " + Coder.pixelToBoard(piece.getOldY()) + " " + newX + " " + newY);
             bufferedWriter.newLine();
             bufferedWriter.flush();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    @Override
-    public void start(Stage stage) throws IOException {
-        socket = new Socket("localhost", 1234);
-
-        try {
-            bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            if (bufferedReader.readLine().equals("1")) {
-                player = 1;
-            } else {
-                player = 2;
-            }
         } catch (IOException e) {
-            closeEverything(socket, bufferedReader, bufferedWriter);
+            e.printStackTrace();
         }
-
-        countTime();
-        listenToServer();
-
-        Scene scene = new Scene(createContent());
-        stage.setTitle("Checkers");
-        stage.setScene(scene);
-        stage.show();
-
     }
 
-    public static void main(String[] args) {
-        launch();
+    private void makeMove(Piece piece, int newX, int newY, MoveResult moveResult) {
+        switch (moveResult.getMoveType()) {
+            case NONE -> piece.abortMove();
+            case NORMAL -> {
+                board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
+                piece.move(newX, newY);
+                board[newX][newY].setPiece(piece);
+                isItMyTurn = false;
+            }
+            case KILL -> {
+                board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
+                piece.move(newX, newY);
+                board[newX][newY].setPiece(piece);
+
+                Piece otherPiece = moveResult.getPiece();
+                board[Coder.pixelToBoard(otherPiece.getOldX())][Coder.pixelToBoard(otherPiece.getOldY())].setPiece(null);
+                Platform.runLater(() -> pieceGroup.getChildren().remove(otherPiece));
+                isItMyTurn = false;
+            }
+        }
+        if (newY == 7 || newY == 0) {
+            Platform.runLater(piece::promote);
+        }
+
+
     }
 
     public void countTime() {
-        new Thread(() -> {
-            while (socket.isConnected()) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if (isItMyTurn) {
-                    time += 0.1;
-                    Platform.runLater(() -> timeString.set("Timer: " + (int)time + "s."));
-                }
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor.scheduleAtFixedRate(() -> {
+            if (isItMyTurn) {
+                time += 0.1;
+                Platform.runLater(() -> timeString.set("Timer: " + (int)time + "s."));
             }
-        }).start();
+        }, 0, 100, TimeUnit.MILLISECONDS);
     }
-
 
     public void listenToServer() {
         new Thread(() -> {
@@ -197,46 +182,33 @@ public class ChessboardClient extends Application {
                         isItMyTurn = true;
                     } else {
                         String[] partsOfMessage = message.split(" ");
+                        int fromX = Integer.parseInt(partsOfMessage[0]);
+                        int fromY = Integer.parseInt(partsOfMessage[1]);
+                        int newX = Integer.parseInt(partsOfMessage[2]);
+                        int newY = Integer.parseInt(partsOfMessage[3]);
+
+                        Piece piece = board[fromX][fromY].getPiece();
+
                         switch(partsOfMessage[4]) {
-                            case "NONE" -> {
-                                int fromX = Integer.parseInt(partsOfMessage[0]);
-                                int fromY = Integer.parseInt(partsOfMessage[1]);
-                                int newX = Integer.parseInt(partsOfMessage[2]);
-                                int newY = Integer.parseInt(partsOfMessage[3]);
-
-                                makeMove(board[fromX][fromY].getPiece(), newX, newY, new MoveResult(MoveType.NONE));
-                            }
-
-                            case "NORMAL" -> {
-                                int fromX = Integer.parseInt(partsOfMessage[0]);
-                                int fromY = Integer.parseInt(partsOfMessage[1]);
-                                int newX = Integer.parseInt(partsOfMessage[2]);
-                                int newY = Integer.parseInt(partsOfMessage[3]);
-
-                                makeMove(board[fromX][fromY].getPiece(), newX, newY, new MoveResult(MoveType.NORMAL));
-                            }
+                            case "NONE" -> makeMove(piece, newX, newY, new MoveResult(MoveType.NONE));
+                            case "NORMAL" -> makeMove(piece, newX, newY, new MoveResult(MoveType.NORMAL));
                             case "KILL" -> {
-                                int fromX = Integer.parseInt(partsOfMessage[0]);
-                                int fromY = Integer.parseInt(partsOfMessage[1]);
-                                int newX = Integer.parseInt(partsOfMessage[2]);
-                                int newY = Integer.parseInt(partsOfMessage[3]);
                                 int killX = Integer.parseInt(partsOfMessage[5]);
                                 int killY = Integer.parseInt(partsOfMessage[6]);
+                                Piece killedPiece = board[killX][killY].getPiece();
 
-                                makeMove(board[fromX][fromY].getPiece(), newX, newY, new MoveResult(MoveType.KILL, board[killX][killY].getPiece()));
+                                makeMove(piece, newX, newY, new MoveResult(MoveType.KILL, killedPiece));
                             }
                         }
                     }
-
                 } catch (IOException e) {
-                    closeEverything(socket, bufferedReader, bufferedWriter);
+                    closeEverything();
                 }
             }
         }).start();
     }
 
-
-    public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
+    private void closeEverything() {
         try {
             if (bufferedReader != null) {
                 bufferedReader.close();

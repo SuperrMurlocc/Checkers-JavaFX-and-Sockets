@@ -1,20 +1,62 @@
 package com.bedi.warcaby;
 
+import javafx.application.Platform;
+import javafx.scene.Group;
+
 import java.io.*;
 import java.net.Socket;
 
 public class ClientHandler implements Runnable {
-    public static final int WIDTH = 8;
-    public static final int HEIGHT = 8;
+    private final Tile[][] board = new Tile[ChessboardClient.WIDTH][ChessboardClient.HEIGHT];
 
-    private final Tile[][] board = new Tile[WIDTH][HEIGHT];
+    private final Socket socket1;
+    private final BufferedWriter bufferedWriter1;
+    private final BufferedReader bufferedReader1;
+    private final Socket socket2;
+    private final BufferedWriter bufferedWriter2;
+    private final BufferedReader bufferedReader2;
 
-    private Socket socket1;
-    private BufferedWriter bufferedWriter1;
-    private BufferedReader bufferedReader1;
-    private Socket socket2;
-    private BufferedWriter bufferedWriter2;
-    private BufferedReader bufferedReader2;
+    public ClientHandler(Socket socket1, Socket socket2) throws IOException {
+        try {
+            this.socket1 = socket1;
+            bufferedWriter1 = new BufferedWriter(new OutputStreamWriter(socket1.getOutputStream()));
+            bufferedReader1 = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
+            bufferedWriter1.write("1");
+            bufferedWriter1.newLine();
+            bufferedWriter1.flush();
+
+            this.socket2 = socket2;
+            if (socket2 != null) {
+                bufferedWriter2 = new BufferedWriter(new OutputStreamWriter(socket2.getOutputStream()));
+                bufferedReader2 = new BufferedReader(new InputStreamReader(socket2.getInputStream()));
+                bufferedWriter2.write("2");
+                bufferedWriter2.newLine();
+                bufferedWriter2.flush();
+            } else {
+                bufferedWriter2 = null;
+                bufferedReader2 = null;
+            }
+        } catch (IOException e) {
+            closeEverything();
+            throw e;
+        }
+    }
+
+    @Override
+    public void run() {
+        createContent();
+        int i = 1;
+        while (socket1.isConnected() && socket2.isConnected()) {
+            try {
+                if (processMove(i % 2 * 2 - 1)) {
+                    i++;
+                }
+            } catch (IOException e) {
+                closeEverything();
+                e.printStackTrace();
+            }
+        }
+    }
 
     private void createContent() {
         for (int y = 0; y < 8; y++) {
@@ -24,9 +66,9 @@ public class ClientHandler implements Runnable {
 
                 Piece piece = null;
                 if (y <= 2 && (x + y) % 2 != 0) {
-                    piece = makePiece(PieceType.RED, x, y);
+                    piece = new Piece(PieceType.RED, x, y);
                 } else if (y >= 5 && (x + y) % 2 != 0) {
-                    piece = makePiece(PieceType.WHITE, x, y);
+                    piece = new Piece(PieceType.WHITE, x, y);
                 }
 
                 if (piece != null) {
@@ -36,8 +78,10 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private int pixelToBoard(double pixel) {
-        return (int)(pixel + ChessboardClient.TILE_SIZE / 2) / ChessboardClient.TILE_SIZE;
+    public static void ping(BufferedWriter bufferedWriter) throws IOException {
+        bufferedWriter.write("PING");
+        bufferedWriter.newLine();
+        bufferedWriter.flush();
     }
 
     private MoveResult tryMove(Piece piece, int newX, int newY) {
@@ -45,8 +89,8 @@ public class ClientHandler implements Runnable {
             return new MoveResult(MoveType.NONE);
         }
 
-        int oldX = pixelToBoard(piece.getOldX());
-        int oldY = pixelToBoard(piece.getOldY());
+        int oldX = Coder.pixelToBoard(piece.getOldX());
+        int oldY = Coder.pixelToBoard(piece.getOldY());
 
         if (Math.abs(newX - oldX) == 1 && newY - oldY == piece.getPieceType().moveDir ) {
             return new MoveResult(MoveType.NORMAL);
@@ -64,44 +108,7 @@ public class ClientHandler implements Runnable {
         return new MoveResult(MoveType.NONE);
     }
 
-    private void makeMove(Piece piece, int newX, int newY, MoveResult moveResult) {
-        switch (moveResult.getMoveType()) {
-            case NONE -> piece.abortMove();
-            case NORMAL -> {
-                board[pixelToBoard(piece.getOldX())][pixelToBoard(piece.getOldY())].setPiece(null);
-                piece.move(newX, newY);
-                board[newX][newY].setPiece(piece);
-
-                if (newY == 7 || newY == 0) {
-                    piece.promote();
-                }
-            }
-            case KILL -> {
-                board[pixelToBoard(piece.getOldX())][pixelToBoard(piece.getOldY())].setPiece(null);
-                piece.move(newX, newY);
-                board[newX][newY].setPiece(piece);
-
-                Piece otherPiece = moveResult.getPiece();
-                board[pixelToBoard(otherPiece.getOldX())][pixelToBoard(otherPiece.getOldY())].setPiece(null);
-
-                if (newY == 7 || newY == 0) {
-                    piece.promote();
-                }
-            }
-        }
-    }
-
-    private Piece makePiece(PieceType pieceType, int x, int y) {
-        return new Piece(pieceType, x ,y);
-    }
-
-    public static void ping(BufferedWriter bufferedWriter) throws IOException {
-        bufferedWriter.write("PING");
-        bufferedWriter.newLine();
-        bufferedWriter.flush();
-    }
-
-    public boolean processMove(int moveDir) {
+    public boolean processMove(int moveDir) throws IOException {
         while (true) {
             try {
                 BufferedReader fromBufferedReader;
@@ -148,47 +155,59 @@ public class ClientHandler implements Runnable {
                 fromBufferedWriter.newLine();
                 fromBufferedWriter.flush();
 
-                if (moveResult.getMoveType() == MoveType.NONE) {
-                    return false;
-                } else {
-                    return true;
-                }
+                return moveResult.getMoveType() != MoveType.NONE;
             } catch (IOException e) {
+                closeEverything();
                 e.printStackTrace();
-                return false;
+                throw e;
             }
         }
     }
 
-    public ClientHandler(Socket socket1, Socket socket2) throws IOException {
-        this.socket1 = socket1;
-        bufferedWriter1 = new BufferedWriter(new OutputStreamWriter(socket1.getOutputStream()));
-        bufferedReader1 = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
+    public void makeMove(Piece piece, int newX, int newY, MoveResult moveResult) {
+        switch (moveResult.getMoveType()) {
+            case NONE -> piece.abortMove();
+            case NORMAL -> {
+                board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
+                piece.move(newX, newY);
+                board[newX][newY].setPiece(piece);
+            }
+            case KILL -> {
+                board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
+                piece.move(newX, newY);
+                board[newX][newY].setPiece(piece);
 
-        this.socket2 = socket2;
-        if (socket2 != null) {
-            bufferedWriter2 = new BufferedWriter(new OutputStreamWriter(socket2.getOutputStream()));
-            bufferedReader2 = new BufferedReader(new InputStreamReader(socket2.getInputStream()));
+                Piece otherPiece = moveResult.getPiece();
+                board[Coder.pixelToBoard(otherPiece.getOldX())][Coder.pixelToBoard(otherPiece.getOldY())].setPiece(null);
+            }
         }
-
-        bufferedWriter1.write("1");
-        bufferedWriter1.newLine();
-        bufferedWriter1.flush();
-
-        bufferedWriter2.write("2");
-        bufferedWriter2.newLine();
-        bufferedWriter2.flush();
+        if (newY == 7 || newY == 0) {
+            piece.promote();
+        }
     }
 
-
-    @Override
-    public void run() {
-        createContent();
-        int i = 1;
-        while (socket1.isConnected() && socket2.isConnected()) {
-            if (processMove(i % 2 * 2 - 1)) {
-                i++;
+    private void closeEverything() {
+        try {
+            if (bufferedReader1 != null) {
+                bufferedReader1.close();
             }
+            if (bufferedWriter1 != null) {
+                bufferedWriter1.close();
+            }
+            if (socket1 != null) {
+                socket1.close();
+            }
+            if (bufferedReader2 != null) {
+                bufferedReader2.close();
+            }
+            if (bufferedWriter2 != null) {
+                bufferedWriter2.close();
+            }
+            if (socket2 != null) {
+                socket2.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

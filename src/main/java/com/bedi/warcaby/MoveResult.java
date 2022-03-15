@@ -1,8 +1,8 @@
 package com.bedi.warcaby;
 
 public class MoveResult {
-    private MoveType moveType;
-    private Piece piece;
+    private final MoveType moveType;
+    private final Piece piece;
 
     public MoveType getMoveType() {
         return moveType;
