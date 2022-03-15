@@ -2,14 +2,11 @@ package com.bedi.warcaby;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import java.io.*;
@@ -33,6 +30,7 @@ public class ChessboardClient extends Application {
     private BufferedReader bufferedReader;
 
     private int player;
+    private int winner = 0;
     private final Label colorLabel = new Label();
 
     private float time = 0;
@@ -140,7 +138,7 @@ public class ChessboardClient extends Application {
                 piece.move(newX, newY);
                 board[newX][newY].setPiece(piece);
                 isItMyTurn = false;
-                if (newY == 7 || newY == 0) {
+                if ((newY == 7 && piece.getPieceType() == PieceType.GRAY) || (newY == 0 && piece.getPieceType() == PieceType.WHITE)) {
                     Platform.runLater(piece::promote);
                 }
             }
@@ -153,7 +151,7 @@ public class ChessboardClient extends Application {
                 board[Coder.pixelToBoard(otherPiece.getOldX())][Coder.pixelToBoard(otherPiece.getOldY())].setPiece(null);
                 Platform.runLater(() -> pieceGroup.getChildren().remove(otherPiece));
                 isItMyTurn = false;
-                if (newY == 7 || newY == 0) {
+                if ((newY == 7 && piece.getPieceType() == PieceType.GRAY) || (newY == 0 && piece.getPieceType() == PieceType.WHITE)) {
                     Platform.runLater(piece::promote);
                 }
             }
@@ -163,6 +161,11 @@ public class ChessboardClient extends Application {
     public void countTime() {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         executor.scheduleAtFixedRate(() -> {
+            if (winner != 0) {
+                Platform.runLater(() -> timer.set((winner == player) ? "You won!" : "You lost!"));
+                executor.shutdown();
+            }
+
             if (isItMyTurn) {
                 time += 0.1;
                 Platform.runLater(() -> timer.set("Timer: " + (int)time + "s."));
@@ -199,6 +202,8 @@ public class ChessboardClient extends Application {
 
                                 makeMove(piece, newX, newY, new MoveResult(MoveType.KILL, killedPiece));
                             }
+                            case "END1" -> winner = 1;
+                            case "END2" -> winner = 2;
                         }
                     }
                 } catch (IOException e) {
