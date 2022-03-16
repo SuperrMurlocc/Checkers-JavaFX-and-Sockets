@@ -49,6 +49,9 @@ public class ChessboardClient extends Application {
         try {
             bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            bufferedWriter.write("wait");
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
 
             if (bufferedReader.readLine().equals("1")) {
                 player = 1;

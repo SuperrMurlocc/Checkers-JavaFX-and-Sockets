@@ -5,7 +5,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Ellipse;
 
 public class Piece extends StackPane {
-    private final PieceType pieceType;
+    private PieceType pieceType;
 
     private double mouseX, mouseY;
     private double oldX, oldY;
@@ -75,7 +75,7 @@ public class Piece extends StackPane {
 
     public void promote() {
         promoteImage();
-        pieceType.moveDir = (pieceType == PieceType.GRAY) ? PieceType.GRAY_SUP.moveDir : PieceType.WHITE_SUP.moveDir;
+        pieceType = (pieceType == PieceType.GRAY) ? PieceType.GRAY_SUP : PieceType.WHITE_SUP;
     }
 
     public void promoteImage() {

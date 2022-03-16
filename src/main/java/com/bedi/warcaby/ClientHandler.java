@@ -103,7 +103,7 @@ public class ClientHandler implements Runnable {
             if (board[middleX][middleY].hasPiece() && board[middleX][middleY].getPiece().getPieceType() != piece.getPieceType()) {
                 return new MoveResult(MoveType.KILL, board[middleX][middleY].getPiece());
             }
-        } else if (piece.getPieceType().moveDir == 2 || piece.getPieceType().moveDir == -2 && Math.abs(newX - oldX) == 1 && Math.abs(newY - oldY) == 1) {
+        } else if ((piece.getPieceType() == PieceType.GRAY_SUP || piece.getPieceType() == PieceType.WHITE_SUP ) && (Math.abs(newX - oldX) == 1 && Math.abs(newY - oldY) == 1)) {
             return new MoveResult(MoveType.NORMAL);
         }
 
@@ -141,7 +141,6 @@ public class ClientHandler implements Runnable {
                 fromBufferedWriter.write(Coder.encode(board[fromX][fromY].getPiece(), newX, newY, new MoveResult(MoveType.NONE)));
                 fromBufferedWriter.newLine();
                 fromBufferedWriter.flush();
-
                 return false;
             }
 
