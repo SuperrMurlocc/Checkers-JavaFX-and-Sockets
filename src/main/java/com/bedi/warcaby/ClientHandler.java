@@ -171,8 +171,6 @@ public class ClientHandler implements Runnable {
                 fromBufferedWriter.write(endOfGameMessage);
                 fromBufferedWriter.newLine();
                 fromBufferedWriter.flush();
-
-                throw new IOException();
             }
 
             return moveResult.getMoveType() != MoveType.NONE;

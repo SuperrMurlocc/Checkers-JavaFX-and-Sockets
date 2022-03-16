@@ -177,7 +177,7 @@ public class ChessboardClient extends Application {
         new Thread(() -> {
             String message;
 
-            while (socket.isConnected()) {
+            while (socket.isConnected() && winner == 0) {
                 try {
                     message = bufferedReader.readLine();
                     System.out.println(message);
@@ -210,6 +210,7 @@ public class ChessboardClient extends Application {
                     closeEverything();
                 }
             }
+            closeEverything();
         }).start();
     }
 
