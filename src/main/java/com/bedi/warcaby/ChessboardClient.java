@@ -20,6 +20,8 @@ public class ChessboardClient extends Application {
     public static final int WIDTH = 8;
     public static final int HEIGHT = 8;
 
+    public static String mode = null;
+
     private final Tile[][] board = new Tile[WIDTH][HEIGHT];
 
     private final Group tileGroup = new Group();
@@ -39,17 +41,23 @@ public class ChessboardClient extends Application {
     private boolean isItMyTurn = false;
 
     public static void main(String[] args) {
+        mode = args[0];
         launch();
     }
 
     @Override
-    public void start(Stage stage) throws IOException {
-        socket = new Socket("localhost", 1234);
+    public void start(Stage stage) throws IOException, InterruptedException {
+        try {
+            socket = new Socket("localhost", 1234);
+        } catch (IOException e) {
+            Thread.sleep(5000);
+            socket = new Socket("localhost", 1234);
+        }
 
         try {
             bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            bufferedWriter.write("wait");
+            bufferedWriter.write(mode);
             bufferedWriter.newLine();
             bufferedWriter.flush();
 
@@ -233,3 +241,5 @@ public class ChessboardClient extends Application {
         }
     }
 }
+
+

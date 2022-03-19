@@ -46,7 +46,7 @@ public class ClientHandler implements Runnable {
     public void run() {
         createContent();
         int i = 1;
-        while (socket1.isConnected() && socket2.isConnected() && whitePieces * grayPieces > 0) {
+        while (socket1.isConnected() && (socket2 == null || socket2.isConnected()) && whitePieces * grayPieces > 0) {
             try {
                 if (processMove(i % 2 * 2 - 1)) {
                     i++;
@@ -126,9 +126,16 @@ public class ClientHandler implements Runnable {
                 toBufferedWriter = bufferedWriter1;
             }
 
-            ping(fromBufferedWriter);
+            if (fromBufferedWriter != null) {
+                ping(fromBufferedWriter);
+            }
 
-            String messageFrom = fromBufferedReader.readLine();
+            String messageFrom;
+            if (fromBufferedReader != null) {
+                messageFrom = fromBufferedReader.readLine();
+            } else {
+                messageFrom = Coder.generateMove();
+            }
             System.out.println(messageFrom);
 
             int fromX = Integer.parseInt(messageFrom.split(" ")[0]);
@@ -136,24 +143,34 @@ public class ClientHandler implements Runnable {
             int newX = (int) Float.parseFloat(messageFrom.split(" ")[2]);
             int newY = (int) Float.parseFloat(messageFrom.split(" ")[3]);
 
+            if (board[fromX][fromY].getPiece() == null) {
+                return false;
+            }
+
             MoveResult moveResult = tryMove(board[fromX][fromY].getPiece(), newX, newY);
             if (Math.signum(board[fromX][fromY].getPiece().getPieceType().moveDir) == Math.signum(moveDir)) {
-                fromBufferedWriter.write(Coder.encode(board[fromX][fromY].getPiece(), newX, newY, new MoveResult(MoveType.NONE)));
-                fromBufferedWriter.newLine();
-                fromBufferedWriter.flush();
+                if (fromBufferedReader != null) {
+                    fromBufferedWriter.write(Coder.encode(board[fromX][fromY].getPiece(), newX, newY, new MoveResult(MoveType.NONE)));
+                    fromBufferedWriter.newLine();
+                    fromBufferedWriter.flush();
+                }
                 return false;
             }
 
             String toMessage = Coder.encode(board[fromX][fromY].getPiece(), newX, newY, moveResult);
             makeMove(board[fromX][fromY].getPiece(), newX, newY, moveResult);
 
-            toBufferedWriter.write(toMessage);
-            toBufferedWriter.newLine();
-            toBufferedWriter.flush();
+            if (toBufferedWriter != null) {
+                toBufferedWriter.write(toMessage);
+                toBufferedWriter.newLine();
+                toBufferedWriter.flush();
+            }
 
-            fromBufferedWriter.write(toMessage);
-            fromBufferedWriter.newLine();
-            fromBufferedWriter.flush();
+            if (fromBufferedReader != null) {
+                fromBufferedWriter.write(toMessage);
+                fromBufferedWriter.newLine();
+                fromBufferedWriter.flush();
+            }
 
             if (whitePieces == 0 || grayPieces == 0) {
                 String endOfGameMessage;
@@ -163,13 +180,17 @@ public class ClientHandler implements Runnable {
                     endOfGameMessage = "1 2 3 4 END2";
                 }
 
-                toBufferedWriter.write(endOfGameMessage);
-                toBufferedWriter.newLine();
-                toBufferedWriter.flush();
+                if (toBufferedWriter != null) {
+                    toBufferedWriter.write(endOfGameMessage);
+                    toBufferedWriter.newLine();
+                    toBufferedWriter.flush();
+                }
 
-                fromBufferedWriter.write(endOfGameMessage);
-                fromBufferedWriter.newLine();
-                fromBufferedWriter.flush();
+                if (fromBufferedReader != null) {
+                    fromBufferedWriter.write(endOfGameMessage);
+                    fromBufferedWriter.newLine();
+                    fromBufferedWriter.flush();
+                }
             }
 
             return moveResult.getMoveType() != MoveType.NONE;
@@ -188,6 +209,9 @@ public class ClientHandler implements Runnable {
                 board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
                 piece.move(newX, newY);
                 board[newX][newY].setPiece(piece);
+                if ((newY == 7 && piece.getPieceType() == PieceType.GRAY) || (newY == 0 && piece.getPieceType() == PieceType.WHITE)) {
+                    piece.promote();
+                }
             }
             case KILL -> {
                 board[Coder.pixelToBoard(piece.getOldX())][Coder.pixelToBoard(piece.getOldY())].setPiece(null);
